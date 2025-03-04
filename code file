@@ -1,0 +1,174 @@
+// Register Shortcode for Project Discussions
+function project_discussion_shortcode() {
+    if (!is_user_logged_in()) {
+        return '<p>You must be logged in to view your discussions.</p>';
+    }
+
+    ob_start();
+    $user_id = get_current_user_id();
+
+    // Fetch projects assigned to the logged-in user
+    $args = array(
+        'post_type'      => 'project',
+        'posts_per_page' => -1,
+        'meta_query'     => array(
+            array(
+                'key'     => 'client_portal_user', // Adjust meta key if needed
+                'value'   => $user_id,
+                'compare' => '='
+            )
+        )
+    );
+
+    $projects = get_posts($args);
+    ?>
+
+    <div class="discussion-section">
+<!--        <h2>Discussion</h2> -->
+        <div class="project-list">
+            <?php foreach ($projects as $project) : ?>
+                <div class="project-card" onclick="openChat('<?php echo esc_attr($project->ID); ?>', '<?php echo esc_js($project->post_title); ?>')">
+                    <span>💬 <?php echo esc_html($project->post_title); ?></span>
+                </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+
+    <div class="chat-popup" id="chatPopup">
+        <div class="chat-header">
+            <span id="chatTitle" data-id="">Chat</span> 
+            <span class="close-btn" onclick="closeChat()">×</span>
+        </div>
+        <div class="chat-body" id="chatBody">Loading...</div>
+        <div class="chat-footer">
+            <input type="text" id="chatInput" placeholder="Type a message..." />
+            <button id="sendMessageBtn">Send</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            function openChat(projectID, projectName) {
+                let chatTitle = document.getElementById("chatTitle");
+                chatTitle.innerText = projectName;
+                chatTitle.setAttribute("data-id", projectID);
+                document.getElementById("chatPopup").style.display = "block";
+                fetchComments(projectID);
+            }
+
+            function closeChat() {
+                document.getElementById("chatPopup").style.display = "none";
+            }
+
+            function fetchComments(projectID) {
+               fetch("<?php echo admin_url('admin-ajax.php'); ?>?action=fetch_project_comments&project_id=" + projectID)
+
+                    .then(response => response.text())
+                    .then(data => {
+                        document.getElementById("chatBody").innerHTML = data;
+                    });
+            }
+
+            document.getElementById("sendMessageBtn").addEventListener("click", function () {
+                let input = document.getElementById("chatInput");
+                let message = input.value.trim();
+                let projectID = document.getElementById("chatTitle").getAttribute("data-id");
+
+                if (message !== "" && projectID) {
+                    let formData = new FormData();
+                    formData.append("action", "post_project_comment");
+                    formData.append("project_id", projectID);
+                    formData.append("message", message);
+
+                    fetch("<?php echo admin_url('admin-ajax.php'); ?>", {
+                        method: "POST",
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            input.value = "";
+                            setTimeout(() => fetchComments(projectID), 300);
+                        } else {
+                            alert("Error posting comment.");
+                        }
+                    });
+                }
+            });
+
+            window.openChat = openChat;
+            window.closeChat = closeChat;
+        });
+    </script>
+
+    <style>
+        .discussion-section { width: 50%; margin: auto; }
+        .project-list { display: flex; flex-direction: column; gap: 10px; }
+        .project-card { display: flex; align-items: center; justify-content: space-between;
+            background-color: #fff; padding: 15px; border-radius: 10px; cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); transition: 0.3s; }
+        .project-card:hover { transform: translateY(-3px); box-shadow: 0 5px 10px rgba(0, 0, 0, 0.15); }
+        .chat-popup { display: none; position: fixed; right: 20px; bottom: 20px; width: 350px;
+            background: white; box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2); border-radius: 10px;
+            overflow: hidden; }
+        .chat-header { display: flex; align-items: center; justify-content: space-between;
+            padding: 15px; background: #4caf50; color: white; font-size: 18px; }
+        .chat-body { height: 300px; overflow-y: auto; padding: 10px; }
+        .chat-footer { display: flex; padding: 10px; border-top: 1px solid #ddd; background: #fff; }
+        .chat-footer input { flex: 1; padding: 10px; border: none; border-radius: 5px; outline: none; }
+        .chat-footer button { background: #4caf50; color: white; border: none; padding: 10px;
+            cursor: pointer; border-radius: 5px; }
+        .close-btn { cursor: pointer; font-size: 20px; }
+    </style>
+
+    <?php
+    return ob_get_clean();
+}
+add_shortcode('project_discussion', 'project_discussion_shortcode');
+
+
+// Fetch Project Comments
+function fetch_project_comments() {
+    if (!isset($_GET['project_id'])) {
+        wp_die();
+    }
+
+    $project_id = intval($_GET['project_id']);
+    $comments = get_comments(array(
+        'post_id' => $project_id,
+        'status'  => 'approve',
+        'order'   => 'ASC'
+    ));
+
+    foreach ($comments as $comment) {
+        echo '<div class="chat-message"><strong>' . esc_html($comment->comment_author) . ':</strong> ' . esc_html($comment->comment_content) . '</div>';
+    }
+    wp_die();
+}
+add_action('wp_ajax_fetch_project_comments', 'fetch_project_comments');
+add_action('wp_ajax_nopriv_fetch_project_comments', 'fetch_project_comments');
+
+
+// Post Project Comment
+function post_project_comment() {
+    if (!isset($_POST['project_id']) || !isset($_POST['message'])) {
+        wp_send_json_error(['message' => 'Invalid input.']);
+    }
+
+    $project_id = intval($_POST['project_id']);
+    $message = sanitize_text_field($_POST['message']);
+    $user_id = get_current_user_id();
+    $user_info = get_userdata($user_id);
+
+    $commentdata = array(
+        'comment_post_ID' => $project_id,
+        'comment_content' => $message,
+        'user_id'         => $user_id,
+        'comment_author'  => $user_info->display_name,
+        'comment_approved'=> 1,
+    );
+
+    wp_insert_comment($commentdata);
+    wp_send_json_success(['message' => 'Comment posted successfully.']);
+}
+add_action('wp_ajax_post_project_comment', 'post_project_comment');
