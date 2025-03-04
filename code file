@@ -1,3 +1,28 @@
+function get_project_color_inline_css($project_id) {
+    $project_color = get_field('project_color', $project_id);
+    return $project_color ? 'background-color:' . esc_attr($project_color) . ';' : '';
+}
+
+
+
+
+function update_last_read() {
+    if (!is_user_logged_in() || !isset($_POST['project_id'])) {
+        wp_send_json_error(['message' => 'Invalid request']);
+    }
+
+    $project_id = intval($_POST['project_id']);
+    $user_id = get_current_user_id();
+
+    // Update last read timestamp to current time
+    update_user_meta($user_id, "last_read_project_{$project_id}", time());
+
+    wp_send_json_success(['message' => 'Last read updated']);
+}
+add_action('wp_ajax_update_last_read', 'update_last_read');
+
+
+
 // Register Shortcode for Project Discussions
 function project_discussion_shortcode() {
     if (!is_user_logged_in()) {
@@ -25,14 +50,29 @@ function project_discussion_shortcode() {
 
     <div class="discussion-section">
 <!--        <h2>Discussion</h2> -->
-      <div class="project-list">
+    <div class="project-list">
     <?php foreach ($projects as $project) : ?>
-        <div class="project-card" onclick="openChat('<?php echo esc_attr($project->ID); ?>', '<?php echo esc_js($project->post_title); ?>')">
-            <img src="https://customer.codeslogistics.com/wp-content/uploads/2025/03/Group-22.svg" alt="Project Icon" class="project-icon">
-            <span><?php echo esc_html($project->post_title); ?></span>
-        </div>
+        <?php 
+            $comment_count = get_comments([
+                'post_id' => $project->ID,
+                'status'  => 'approve',
+                'count'   => true,
+            ]);
+        ?>
+       <div class="project-card" style="<?php echo get_project_color_inline_css($project->ID); ?>" data-project-id="<?php echo esc_attr($project->ID); ?>" data-project-title="<?php echo esc_attr($project->post_title); ?>">
+
+    <img decoding="async" src="https://customer.codeslogistics.com/wp-content/uploads/2025/03/Group-22.svg" alt="Project Icon" class="project-icon">
+    <span class="project-title">
+        <?php echo esc_html($project->post_title); ?>
+    </span>
+    <?php if ($comment_count > 0) : ?>
+        <span class="comment-badge"><?php echo esc_html($comment_count); ?></span>
+    <?php endif; ?>
+</div>
+
     <?php endforeach; ?>
 </div>
+
 
 <div class="chat-popup" id="chatPopup">
     <div class="chat-header">
@@ -47,64 +87,100 @@ function project_discussion_shortcode() {
 </div>
 
     <script>
+
+
         document.addEventListener("DOMContentLoaded", function () {
-            function openChat(projectID, projectName) {
-                let chatTitle = document.getElementById("chatTitle");
-                chatTitle.innerText = projectName;
-                chatTitle.setAttribute("data-id", projectID);
-                document.getElementById("chatPopup").style.display = "block";
-                fetchComments(projectID);
+    function openChat(projectID, projectName) {
+        let chatTitle = document.getElementById("chatTitle");
+        chatTitle.innerText = projectName;
+        chatTitle.setAttribute("data-id", projectID);
+        document.getElementById("chatPopup").style.display = "block";
+        fetchComments(projectID);
+
+        // Hide the comment badge for the opened project
+        let projectCard = document.querySelector(`.project-card[data-project-id="${projectID}"]`);
+        if (projectCard) {
+            let badge = projectCard.querySelector(".comment-badge");
+            if (badge) {
+                badge.style.display = "none";
             }
+        }
 
-            function closeChat() {
-                document.getElementById("chatPopup").style.display = "none";
-            }
+        // Update last read timestamp
+        updateLastRead(projectID);
+    }
 
-            function fetchComments(projectID) {
-               fetch("<?php echo admin_url('admin-ajax.php'); ?>?action=fetch_project_comments&project_id=" + projectID)
+    function closeChat() {
+        document.getElementById("chatPopup").style.display = "none";
+    }
 
-                    .then(response => response.text())
-                    .then(data => {
-                        document.getElementById("chatBody").innerHTML = data;
-                    });
-            }
-
-            document.getElementById("sendMessageBtn").addEventListener("click", function () {
-                let input = document.getElementById("chatInput");
-                let message = input.value.trim();
-                let projectID = document.getElementById("chatTitle").getAttribute("data-id");
-
-                if (message !== "" && projectID) {
-                    let formData = new FormData();
-                    formData.append("action", "post_project_comment");
-                    formData.append("project_id", projectID);
-                    formData.append("message", message);
-
-                    fetch("<?php echo admin_url('admin-ajax.php'); ?>", {
-                        method: "POST",
-                        body: formData
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            input.value = "";
-                            setTimeout(() => fetchComments(projectID), 300);
-                        } else {
-                            alert("Error posting comment.");
-                        }
-                    });
-                }
+    function fetchComments(projectID) {
+        fetch("<?php echo admin_url('admin-ajax.php'); ?>?action=fetch_project_comments&project_id=" + projectID)
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById("chatBody").innerHTML = data;
             });
+    }
 
-            window.openChat = openChat;
-            window.closeChat = closeChat;
+    function updateLastRead(projectID) {
+        fetch("<?php echo admin_url('admin-ajax.php'); ?>", {
+            method: "POST",
+            body: new URLSearchParams({
+                action: "update_last_read",
+                project_id: projectID
+            }),
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded"
+            }
         });
+    }
+
+    window.openChat = openChat;
+    window.closeChat = closeChat;
+
+    // Attach click event to project cards
+    document.querySelectorAll(".project-card").forEach(card => {
+        card.addEventListener("click", function () {
+            let projectID = this.getAttribute("data-project-id");
+            let projectName = this.getAttribute("data-project-title");
+            openChat(projectID, projectName);
+        });
+    });
+});
+
     </script>
 
     <style>
+
+.comment-badge {
+    position: absolute; /* Relative to .project-card */
+    top: 5px;
+    right: 5px;
+    background: red;
+    color: white;
+    font-size: 12px;
+    width: 20px;
+    height: 20px;
+    text-align: center;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    visibility: visible !important; /* Ensures it remains visible */
+    opacity: 1 !important;
+}
+
+/* Prevent badge from appearing when empty */
+.comment-badge:empty {
+    display: none;
+}
+
+
+
 		.project-icon {
     width: 50px;
-    height: 0px;
+    height: 20px;
 			margin-right: 20px;
 }
         .discussion-section {
@@ -139,11 +215,12 @@ function project_discussion_shortcode() {
 /*     box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1); */
     transition: 0.3s;
     font-family: 'Plus Jakarta Sans', sans-serif;
-background: #FFE7D6;
+/* background: #FFE7D6; */
+	background-color: var(--project-color);
     margin-top: 20px;
     font-size: 18px;
     font-weight: 600;
-    
+    position:relative;
 }
 
 .project-card:hover {
