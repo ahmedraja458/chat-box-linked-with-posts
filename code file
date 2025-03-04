@@ -25,26 +25,26 @@ function project_discussion_shortcode() {
 
     <div class="discussion-section">
 <!--        <h2>Discussion</h2> -->
-        <div class="project-list">
-            <?php foreach ($projects as $project) : ?>
-                <div class="project-card" onclick="openChat('<?php echo esc_attr($project->ID); ?>', '<?php echo esc_js($project->post_title); ?>')">
-                    <span>💬 <?php echo esc_html($project->post_title); ?></span>
-                </div>
-            <?php endforeach; ?>
+      <div class="project-list">
+    <?php foreach ($projects as $project) : ?>
+        <div class="project-card" onclick="openChat('<?php echo esc_attr($project->ID); ?>', '<?php echo esc_js($project->post_title); ?>')">
+            <img src="https://customer.codeslogistics.com/wp-content/uploads/2025/03/Group-22.svg" alt="Project Icon" class="project-icon">
+            <span><?php echo esc_html($project->post_title); ?></span>
         </div>
-    </div>
+    <?php endforeach; ?>
+</div>
 
-    <div class="chat-popup" id="chatPopup">
-        <div class="chat-header">
-            <span id="chatTitle" data-id="">Chat</span> 
-            <span class="close-btn" onclick="closeChat()">×</span>
-        </div>
-        <div class="chat-body" id="chatBody">Loading...</div>
-        <div class="chat-footer">
-            <input type="text" id="chatInput" placeholder="Type a message..." />
-            <button id="sendMessageBtn">Send</button>
-        </div>
+<div class="chat-popup" id="chatPopup">
+    <div class="chat-header">
+        <span id="chatTitle" data-id="">Chat</span> 
+        <span class="close-btn" onclick="closeChat()">×</span>
     </div>
+    <div class="chat-body" id="chatBody">Loading...</div>
+    <div class="chat-footer">
+        <input type="text" id="chatInput" placeholder="Type a message..." />
+        <button id="sendMessageBtn">Send</button>
+    </div>
+</div>
 
     <script>
         document.addEventListener("DOMContentLoaded", function () {
@@ -102,23 +102,118 @@ function project_discussion_shortcode() {
     </script>
 
     <style>
-        .discussion-section { width: 50%; margin: auto; }
-        .project-list { display: flex; flex-direction: column; gap: 10px; }
-        .project-card { display: flex; align-items: center; justify-content: space-between;
-            background-color: #fff; padding: 15px; border-radius: 10px; cursor: pointer;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); transition: 0.3s; }
-        .project-card:hover { transform: translateY(-3px); box-shadow: 0 5px 10px rgba(0, 0, 0, 0.15); }
-        .chat-popup { display: none; position: fixed; right: 20px; bottom: 20px; width: 350px;
-            background: white; box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2); border-radius: 10px;
-            overflow: hidden; }
-        .chat-header { display: flex; align-items: center; justify-content: space-between;
-            padding: 15px; background: #4caf50; color: white; font-size: 18px; }
-        .chat-body { height: 300px; overflow-y: auto; padding: 10px; }
-        .chat-footer { display: flex; padding: 10px; border-top: 1px solid #ddd; background: #fff; }
-        .chat-footer input { flex: 1; padding: 10px; border: none; border-radius: 5px; outline: none; }
-        .chat-footer button { background: #4caf50; color: white; border: none; padding: 10px;
-            cursor: pointer; border-radius: 5px; }
-        .close-btn { cursor: pointer; font-size: 20px; }
+		.project-icon {
+    width: 50px;
+    height: 0px;
+			margin-right: 20px;
+}
+        .discussion-section {
+    width: 100%;
+    /* Make it take full width */
+    max-width: 800px;
+    /* Limit max width to align with notifications section */
+    margin-left: 35px;
+    /* Align it to the left */
+    padding-left: 20px;
+    /* Add some spacing if needed */
+}
+
+.project-list {
+      display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    /* Two columns */
+    gap: 15px;
+    justify-content: left;
+    /* Align items to the left */
+    align-items: start;
+}
+
+
+
+.project-card {
+    display: flex;
+    align-items: center;
+    padding: 15px 20px;
+    border-radius: 12px;
+    cursor: pointer;
+/*     box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1); */
+    transition: 0.3s;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+background: #FFE7D6;
+    margin-top: 20px;
+    font-size: 18px;
+    font-weight: 600;
+    
+}
+
+.project-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.15);
+}
+
+.chat-popup {
+    display: none;
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    width: 350px;
+    background: white;
+    box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    overflow: hidden;
+	z-index: 1;
+}
+
+.chat-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 15px;
+    background: #f78426;
+    color: white;
+    font-size: 18px;
+	font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 600;
+}
+
+.chat-body {
+    height: 300px;
+    overflow-y: auto;
+    padding: 10px;
+	    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 400;
+
+}
+
+.chat-footer {
+    display: flex;
+    padding: 10px;
+    border-top: 1px solid #ddd;
+    background: #fff;
+}
+
+.chat-footer input {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    outline: none;
+}
+
+.chat-footer button {
+    background: #f78426;
+    color: white;
+    border: none;
+    padding: 10px;
+    cursor: pointer;
+    border-radius: 5px;
+	
+}
+
+.close-btn {
+    cursor: pointer;
+    font-size: 20px;
+}
     </style>
 
     <?php
