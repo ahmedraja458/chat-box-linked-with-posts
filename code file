@@ -309,19 +309,35 @@ function fetch_project_comments() {
     $comments = get_comments(array(
         'post_id' => $project_id,
         'status'  => 'approve',
-        'order'   => 'ASC'
+        'order'   => 'ASC',
+        'parent'  => 0 // Fetch only top-level comments
     ));
 
     foreach ($comments as $comment) {
         echo '<div class="chat-message"><strong>' . esc_html($comment->comment_author) . ':</strong> ' . esc_html($comment->comment_content) . '</div>';
+        
+        // Fetch replies to the current comment
+        $replies = get_comments(array(
+            'post_id'  => $project_id,
+            'status'   => 'approve',
+            'order'    => 'ASC',
+            'parent'   => $comment->comment_ID // Fetch replies for this comment
+        ));
+
+        if (!empty($replies)) {
+            echo '<div class="comment-replies" style="margin-left: 20px;">';
+            foreach ($replies as $reply) {
+                echo '<div class="chat-reply"><strong>' . esc_html($reply->comment_author) . ':</strong> ' . esc_html($reply->comment_content) . '</div>';
+            }
+            echo '</div>';
+        }
     }
     wp_die();
 }
 add_action('wp_ajax_fetch_project_comments', 'fetch_project_comments');
 add_action('wp_ajax_nopriv_fetch_project_comments', 'fetch_project_comments');
 
-
-// Post Project Comment
+// Post Project Comment or Reply
 function post_project_comment() {
     if (!isset($_POST['project_id']) || !isset($_POST['message'])) {
         wp_send_json_error(['message' => 'Invalid input.']);
@@ -329,6 +345,7 @@ function post_project_comment() {
 
     $project_id = intval($_POST['project_id']);
     $message = sanitize_text_field($_POST['message']);
+    $parent_id = isset($_POST['parent_id']) ? intval($_POST['parent_id']) : 0; // Default to 0 if not a reply
     $user_id = get_current_user_id();
     $user_info = get_userdata($user_id);
 
@@ -337,6 +354,7 @@ function post_project_comment() {
         'comment_content' => $message,
         'user_id'         => $user_id,
         'comment_author'  => $user_info->display_name,
+        'comment_parent'  => $parent_id,
         'comment_approved'=> 1,
     );
 
