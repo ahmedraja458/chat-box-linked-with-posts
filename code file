@@ -87,63 +87,37 @@ function project_discussion_shortcode() {
 </div>
 
     <script>
-function replyToComment(commentID) {
-    let inputField = document.getElementById("chatInput");
-    inputField.setAttribute("data-reply-to", commentID);
-    inputField.placeholder = "Replying to comment #" + commentID + "...";
-    inputField.focus();
-}
+document.addEventListener("DOMContentLoaded", function () {
+function openChat(projectID, projectName, projectColor) {
+    let chatTitle = document.getElementById("chatTitle");
+    chatTitle.innerText = projectName;
+    chatTitle.setAttribute("data-id", projectID);
+    document.getElementById("chatPopup").style.display = "block";
+    document.getElementById("chatPopup").setAttribute("data-project-color", projectColor);
 
-document.getElementById("sendMessageBtn").addEventListener("click", function () {
-    let projectID = document.getElementById("chatTitle").getAttribute("data-id");
-    let message = document.getElementById("chatInput").value;
-    let parentID = document.getElementById("chatInput").getAttribute("data-reply-to") || 0;
+    // Apply the project color to the chat header
+    document.querySelector(".chat-header").style.backgroundColor = projectColor;
 
-    if (!message.trim()) return;
+    // Apply the project color to the reply buttons and send message button
+    document.querySelectorAll(".reply-button, #sendMessageBtn").forEach(button => {
+        button.style.backgroundColor = projectColor;
+    });
 
-    fetch("<?php echo admin_url('admin-ajax.php'); ?>", {
-        method: "POST",
-        body: new URLSearchParams({
-            action: "post_project_comment",
-            project_id: projectID,
-            message: message,
-            parent_id: parentID
-        }),
-        headers: {
-            "Content-Type": "application/x-www-form-urlencoded"
+    // Hide the comment badge for the opened project
+    let projectCard = document.querySelector(`.project-card[data-project-id="${projectID}"]`);
+    if (projectCard) {
+        let badge = projectCard.querySelector(".comment-badge");
+        if (badge) {
+            badge.style.display = "none";
         }
-    }).then(response => response.json())
-      .then(data => {
-          if (data.success) {
-              document.getElementById("chatInput").value = "";
-              document.getElementById("chatInput").removeAttribute("data-reply-to");
-              document.getElementById("chatInput").placeholder = "Type a message...";
-              fetchComments(projectID);
-          }
-      });
-});
-
-
-        document.addEventListener("DOMContentLoaded", function () {
-    function openChat(projectID, projectName) {
-        let chatTitle = document.getElementById("chatTitle");
-        chatTitle.innerText = projectName;
-        chatTitle.setAttribute("data-id", projectID);
-        document.getElementById("chatPopup").style.display = "block";
-        fetchComments(projectID);
-
-        // Hide the comment badge for the opened project
-        let projectCard = document.querySelector(`.project-card[data-project-id="${projectID}"]`);
-        if (projectCard) {
-            let badge = projectCard.querySelector(".comment-badge");
-            if (badge) {
-                badge.style.display = "none";
-            }
-        }
-
-        // Update last read timestamp
-        updateLastRead(projectID);
     }
+
+    // Update last read timestamp
+    updateLastRead(projectID);
+
+    // Fetch comments for the project
+    fetchComments(projectID);
+}
 
     function closeChat() {
         document.getElementById("chatPopup").style.display = "none";
@@ -170,17 +144,57 @@ document.getElementById("sendMessageBtn").addEventListener("click", function () 
         });
     }
 
-    window.openChat = openChat;
-    window.closeChat = closeChat;
+    function replyToComment(commentID) {
+        let inputField = document.getElementById("chatInput");
+        inputField.setAttribute("data-reply-to", commentID);
+        inputField.placeholder = "Replying to comment #" + commentID + "...";
+        inputField.focus();
+    }
 
     // Attach click event to project cards
     document.querySelectorAll(".project-card").forEach(card => {
         card.addEventListener("click", function () {
             let projectID = this.getAttribute("data-project-id");
             let projectName = this.getAttribute("data-project-title");
-            openChat(projectID, projectName);
+            let projectColor = this.style.backgroundColor; // Get the background color of the project card
+            openChat(projectID, projectName, projectColor);
         });
     });
+
+    // Send message button event listener
+    document.getElementById("sendMessageBtn").addEventListener("click", function () {
+        let projectID = document.getElementById("chatTitle").getAttribute("data-id");
+        let message = document.getElementById("chatInput").value;
+        let parentID = document.getElementById("chatInput").getAttribute("data-reply-to") || 0;
+
+        if (!message.trim()) return;
+
+        fetch("<?php echo admin_url('admin-ajax.php'); ?>", {
+            method: "POST",
+            body: new URLSearchParams({
+                action: "post_project_comment",
+                project_id: projectID,
+                message: message,
+                parent_id: parentID
+            }),
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded"
+            }
+        }).then(response => response.json())
+          .then(data => {
+              if (data.success) {
+                  document.getElementById("chatInput").value = "";
+                  document.getElementById("chatInput").removeAttribute("data-reply-to");
+                  document.getElementById("chatInput").placeholder = "Type a message...";
+                  fetchComments(projectID);
+              }
+          });
+    });
+
+    // Expose functions to the global scope
+    window.openChat = openChat;
+    window.closeChat = closeChat;
+    window.replyToComment = replyToComment;
 });
 
     </script>
@@ -237,7 +251,6 @@ img.comment-avatar {
 }
 
 .reply-button {
-    background: #f78426;
     border: none;
     color: #ffffff;
     font-size: 12px;
@@ -246,7 +259,6 @@ img.comment-avatar {
 }
 
 .reply-button:hover {
-	background:#f78426;
     text-decoration: underline;
 }
 
@@ -267,7 +279,7 @@ img.comment-avatar {
 }
 
 .chat-footer button {
-    background: #f78426;
+/*     background: #f78426; */
     color: white;
     border: none;
     padding: 10px 15px;
@@ -371,7 +383,8 @@ img.comment-avatar {
     align-items: center;
     justify-content: space-between;
     padding: 15px;
-    background: #f78426;
+/*     background: #f78426; */
+	background-color: var(--project-color); /* Fallback color */  ;
     color: white;
     font-size: 18px;
 	font-family: 'Plus Jakarta Sans', sans-serif;
