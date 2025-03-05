@@ -87,6 +87,41 @@ function project_discussion_shortcode() {
 </div>
 
     <script>
+function replyToComment(commentID) {
+    let inputField = document.getElementById("chatInput");
+    inputField.setAttribute("data-reply-to", commentID);
+    inputField.placeholder = "Replying to comment #" + commentID + "...";
+    inputField.focus();
+}
+
+document.getElementById("sendMessageBtn").addEventListener("click", function () {
+    let projectID = document.getElementById("chatTitle").getAttribute("data-id");
+    let message = document.getElementById("chatInput").value;
+    let parentID = document.getElementById("chatInput").getAttribute("data-reply-to") || 0;
+
+    if (!message.trim()) return;
+
+    fetch("<?php echo admin_url('admin-ajax.php'); ?>", {
+        method: "POST",
+        body: new URLSearchParams({
+            action: "post_project_comment",
+            project_id: projectID,
+            message: message,
+            parent_id: parentID
+        }),
+        headers: {
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
+    }).then(response => response.json())
+      .then(data => {
+          if (data.success) {
+              document.getElementById("chatInput").value = "";
+              document.getElementById("chatInput").removeAttribute("data-reply-to");
+              document.getElementById("chatInput").placeholder = "Type a message...";
+              fetchComments(projectID);
+          }
+      });
+});
 
 
         document.addEventListener("DOMContentLoaded", function () {
@@ -151,6 +186,96 @@ function project_discussion_shortcode() {
     </script>
 
     <style>
+
+.chat-message {
+    background: #ffffff;
+    padding: 10px 15px;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    position: relative;
+}
+
+.chat-message strong {
+    color: #333;
+    margin-right: 8px;
+}
+
+.comment-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50px;
+    margin-right: 10px;
+    object-fit: cover;
+}
+img.comment-avatar {
+    border-radius: 50px;
+}
+.comment-meta {
+    display: flex;
+    flex-direction: column;
+}
+
+.comment-time {
+    font-size: 12px;
+    color: #777;
+    margin-top: 2px;
+}
+
+.comment-replies {
+    margin-left: 40px;
+    border-left: 2px solid #ddd;
+    padding-left: 10px;
+}
+
+.chat-reply {
+    background: #F8FAFF;
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-bottom: 6px;
+}
+
+.reply-button {
+    background: #f78426;
+    border: none;
+    color: #ffffff;
+    font-size: 12px;
+    cursor: pointer;
+    margin-top: 4px;
+}
+
+.reply-button:hover {
+	background:#f78426;
+    text-decoration: underline;
+}
+
+.chat-footer {
+    display: flex;
+    padding: 10px;
+    border-top: 1px solid #ddd;
+    background: #fff;
+    align-items: center;
+}
+
+.chat-footer input {
+    flex: 1;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    outline: none;
+}
+
+.chat-footer button {
+    background: #f78426;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    cursor: pointer;
+    border-radius: 5px;
+    margin-left: 5px;
+}
+
 
 .comment-badge {
     position: absolute; /* Relative to .project-card */
@@ -233,7 +358,7 @@ function project_discussion_shortcode() {
     position: fixed;
     right: 20px;
     bottom: 20px;
-    width: 350px;
+    width: 450px;
     background: white;
     box-shadow: 0 5px 10px rgba(0, 0, 0, 0.2);
     border-radius: 10px;
@@ -306,34 +431,56 @@ function fetch_project_comments() {
     }
 
     $project_id = intval($_GET['project_id']);
-    $comments = get_comments(array(
+    $comments = get_comments([
         'post_id' => $project_id,
         'status'  => 'approve',
         'order'   => 'ASC',
         'parent'  => 0 // Fetch only top-level comments
-    ));
+    ]);
 
     foreach ($comments as $comment) {
-        echo '<div class="chat-message"><strong>' . esc_html($comment->comment_author) . ':</strong> ' . esc_html($comment->comment_content) . '</div>';
-        
+        $user_avatar = get_avatar_url($comment->user_id, ['size' => 32]);
+        $time_ago = human_time_diff(strtotime($comment->comment_date), current_time('timestamp')) . ' ago';
+
+        echo '<div class="chat-message">
+                <img src="' . esc_url($user_avatar) . '" class="comment-avatar">
+                <div class="comment-meta">
+                    <strong>' . esc_html($comment->comment_author) . '</strong>
+                    <span class="comment-time">' . esc_html($time_ago) . '</span>
+                    <p>' . esc_html($comment->comment_content) . '</p>
+                    <button class="reply-button" onclick="replyToComment(' . $comment->comment_ID . ')">Reply</button>
+                </div>
+              </div>';
+
         // Fetch replies to the current comment
-        $replies = get_comments(array(
+        $replies = get_comments([
             'post_id'  => $project_id,
             'status'   => 'approve',
             'order'    => 'ASC',
-            'parent'   => $comment->comment_ID // Fetch replies for this comment
-        ));
+            'parent'   => $comment->comment_ID
+        ]);
 
         if (!empty($replies)) {
-            echo '<div class="comment-replies" style="margin-left: 20px;">';
+            echo '<div class="comment-replies">';
             foreach ($replies as $reply) {
-                echo '<div class="chat-reply"><strong>' . esc_html($reply->comment_author) . ':</strong> ' . esc_html($reply->comment_content) . '</div>';
+                $reply_avatar = get_avatar_url($reply->user_id, ['size' => 28]);
+                $reply_time_ago = human_time_diff(strtotime($reply->comment_date), current_time('timestamp')) . ' ago';
+
+                echo '<div class="chat-reply">
+                        <img src="' . esc_url($reply_avatar) . '" class="comment-avatar">
+                        <div class="comment-meta">
+                            <strong>' . esc_html($reply->comment_author) . '</strong>
+                            <span class="comment-time">' . esc_html($reply_time_ago) . '</span>
+                            <p>' . esc_html($reply->comment_content) . '</p>
+                        </div>
+                      </div>';
             }
             echo '</div>';
         }
     }
     wp_die();
 }
+
 add_action('wp_ajax_fetch_project_comments', 'fetch_project_comments');
 add_action('wp_ajax_nopriv_fetch_project_comments', 'fetch_project_comments');
 
