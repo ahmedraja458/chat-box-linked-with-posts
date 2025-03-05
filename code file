@@ -98,10 +98,8 @@ function openChat(projectID, projectName, projectColor) {
     // Apply the project color to the chat header
     document.querySelector(".chat-header").style.backgroundColor = projectColor;
 
-    // Apply the project color to the reply buttons and send message button
-    document.querySelectorAll(".reply-button, #sendMessageBtn").forEach(button => {
-        button.style.backgroundColor = projectColor;
-    });
+    // Apply the project color to the send message button
+    document.getElementById("sendMessageBtn").style.backgroundColor = projectColor;
 
     // Hide the comment badge for the opened project
     let projectCard = document.querySelector(`.project-card[data-project-id="${projectID}"]`);
@@ -115,21 +113,26 @@ function openChat(projectID, projectName, projectColor) {
     // Update last read timestamp
     updateLastRead(projectID);
 
-    // Fetch comments for the project
-    fetchComments(projectID);
+    // Fetch comments for the project and apply the project color to reply buttons
+    fetchComments(projectID, projectColor);
 }
 
     function closeChat() {
         document.getElementById("chatPopup").style.display = "none";
     }
 
-    function fetchComments(projectID) {
-        fetch("<?php echo admin_url('admin-ajax.php'); ?>?action=fetch_project_comments&project_id=" + projectID)
-            .then(response => response.text())
-            .then(data => {
-                document.getElementById("chatBody").innerHTML = data;
+    function fetchComments(projectID, projectColor) {
+    fetch("<?php echo admin_url('admin-ajax.php'); ?>?action=fetch_project_comments&project_id=" + projectID)
+        .then(response => response.text())
+        .then(data => {
+            document.getElementById("chatBody").innerHTML = data;
+
+            // Apply the project color to all reply buttons
+            document.querySelectorAll(".reply-button").forEach(button => {
+                button.style.backgroundColor = projectColor;
             });
-    }
+        });
+}
 
     function updateLastRead(projectID) {
         fetch("<?php echo admin_url('admin-ajax.php'); ?>", {
@@ -152,14 +155,14 @@ function openChat(projectID, projectName, projectColor) {
     }
 
     // Attach click event to project cards
-    document.querySelectorAll(".project-card").forEach(card => {
-        card.addEventListener("click", function () {
-            let projectID = this.getAttribute("data-project-id");
-            let projectName = this.getAttribute("data-project-title");
-            let projectColor = this.style.backgroundColor; // Get the background color of the project card
-            openChat(projectID, projectName, projectColor);
-        });
+  document.querySelectorAll(".project-card").forEach(card => {
+    card.addEventListener("click", function () {
+        let projectID = this.getAttribute("data-project-id");
+        let projectName = this.getAttribute("data-project-title");
+        let projectColor = this.style.backgroundColor; // Get the background color of the project card
+        openChat(projectID, projectName, projectColor);
     });
+});
 
     // Send message button event listener
     document.getElementById("sendMessageBtn").addEventListener("click", function () {
@@ -252,13 +255,14 @@ img.comment-avatar {
 
 .reply-button {
     border: none;
-    color: #ffffff;
+    color: #282828;
     font-size: 12px;
     cursor: pointer;
     margin-top: 4px;
 }
 
 .reply-button:hover {
+	color:#282828;
     text-decoration: underline;
 }
 
@@ -390,7 +394,9 @@ img.comment-avatar {
 	font-family: 'Plus Jakarta Sans', sans-serif;
     font-weight: 600;
 }
-
+span#chatTitle {
+    color: #282828;
+}
 .chat-body {
     height: 300px;
     overflow-y: auto;
@@ -428,6 +434,7 @@ img.comment-avatar {
 .close-btn {
     cursor: pointer;
     font-size: 20px;
+color:#282828;
 }
     </style>
 
