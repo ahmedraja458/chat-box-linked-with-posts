@@ -50,7 +50,7 @@ function project_discussion_shortcode() {
 
     <div class="discussion-section">
 <!--        <h2>Discussion</h2> -->
-    <div class="project-list">
+ <div class="project-list">
     <?php foreach ($projects as $project) : ?>
         <?php 
             $comment_count = get_comments([
@@ -59,17 +59,18 @@ function project_discussion_shortcode() {
                 'count'   => true,
             ]);
         ?>
-       <div class="project-card" style="<?php echo get_project_color_inline_css($project->ID); ?>" data-project-id="<?php echo esc_attr($project->ID); ?>" data-project-title="<?php echo esc_attr($project->post_title); ?>">
-
-    <img decoding="async" src="https://customer.codeslogistics.com/wp-content/uploads/2025/03/Group-22.svg" alt="Project Icon" class="project-icon">
-    <span class="project-title">
-        <?php echo esc_html($project->post_title); ?>
-    </span>
-    <?php if ($comment_count > 0) : ?>
-        <span class="comment-badge"><?php echo esc_html($comment_count); ?></span>
-    <?php endif; ?>
-</div>
-
+        <div class="project-card" style="<?php echo get_project_color_inline_css($project->ID); ?>" data-project-id="<?php echo esc_attr($project->ID); ?>" data-project-title="<?php echo esc_attr($project->post_title); ?>">
+            <!-- Image Container -->
+            <div class="project-icon-box">
+                <img decoding="async" src="https://customer.codeslogistics.com/wp-content/uploads/2025/03/Path-34.svg" alt="Project Icon" class="project-icon">
+            </div>
+            <span class="project-title">
+                <?php echo esc_html($project->post_title); ?>
+            </span>
+            <?php if ($comment_count > 0) : ?>
+                <span class="comment-badge"><?php echo esc_html($comment_count); ?></span>
+            <?php endif; ?>
+        </div>
     <?php endforeach; ?>
 </div>
 
@@ -204,6 +205,24 @@ function openChat(projectID, projectName, projectColor) {
 
     <style>
 
+.project-icon-box {
+    width: 65px;
+    height: 65px;
+    background-color: #ffffff;
+    border-radius: 10px; /* Adjust the corner radius as needed */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden; /* Ensures the image stays within the box */
+}
+
+.project-icon {
+    max-width: 100%; /* Ensures the image does not exceed the container width */
+    max-height: 100%; /* Ensures the image does not exceed the container height */
+    display: block; /* Ensures the image behaves as a block element */
+    margin: auto; /* Centers the image horizontally and vertically */
+}
+
 .chat-message {
     background: #ffffff;
     padding: 10px 15px;
@@ -317,13 +336,6 @@ img.comment-avatar {
     display: none;
 }
 
-
-
-		.project-icon {
-    width: 50px;
-    height: 20px;
-			margin-right: 20px;
-}
         .discussion-section {
     width: 100%;
     /* Make it take full width */
@@ -435,6 +447,11 @@ span#chatTitle {
     cursor: pointer;
     font-size: 20px;
 color:#282828;
+}
+
+
+span.project-title {
+    margin-left: 15px;
 }
     </style>
 
