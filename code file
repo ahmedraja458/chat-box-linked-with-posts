@@ -1,10 +1,32 @@
-function hex_to_css_filter($hex_color) {
+function fetch_svg_content($svg_url) {
+    // Fetch the SVG content from the URL
+    $svg_content = file_get_contents($svg_url);
+
+    // Remove the hardcoded fill attribute
+    $svg_content = preg_replace('/fill="[^"]*"/', '', $svg_content);
+
+    // Return the SVG content or an empty string if the fetch fails
+    return $svg_content ? $svg_content : '';
+}
+
+function hex_to_css_filter($hex_color, $percent = 10) {
+    // Remove the '#' from the hex color
     $hex_color = str_replace('#', '', $hex_color);
+
+    // Convert hex to RGB
     $r = hexdec(substr($hex_color, 0, 2));
     $g = hexdec(substr($hex_color, 2, 2));
     $b = hexdec(substr($hex_color, 4, 2));
-    $filter = "invert(1) sepia(1) saturate(10000%) hue-rotate(${r}deg) brightness(${g}%) contrast(${b}%)";
-    return $filter;
+
+    // Darken the RGB values by reducing brightness
+    $r = max(0, min(255, $r * (100 - $percent) / 100));
+    $g = max(0, min(255, $g * (100 - $percent) / 100));
+    $b = max(0, min(255, $b * (100 - $percent) / 100));
+
+    // Convert RGB back to hex
+    $darker_color = sprintf("#%02x%02x%02x", $r, $g, $b);
+
+    return $darker_color;
 }
 
 function get_project_color_inline_css($project_id) {
@@ -69,10 +91,24 @@ function project_discussion_shortcode() {
         ?>
         <div class="project-card" style="<?php echo get_project_color_inline_css($project->ID); ?>" data-project-id="<?php echo esc_attr($project->ID); ?>" data-project-title="<?php echo esc_attr($project->post_title); ?>">
             <!-- Image Container -->
-           <div class="project-icon-box" style="background-color: #ffffff;">
-    <svg class="project-icon" viewBox="0 0 24 24" fill="<?php echo esc_attr(get_field('project_color', $project->ID)); ?>" xmlns="http://www.w3.org/2000/svg">
-        <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z"/>
-    </svg>
+
+<!-- Project icon -->
+<div class="project-icon-box" style="background-color: #ffffff;">
+    <?php
+    $svg_url = 'https://customer.codeslogistics.com/wp-content/uploads/2025/03/Path-34.svg';
+    $svg_content = fetch_svg_content($svg_url);
+
+    if ($svg_content) {
+        $project_color = get_field('project_color', $project->ID);
+        $darker_color = hex_to_css_filter($project_color, 10); // 20% darker
+        $svg_content = str_replace('<path ', '<path fill="' . esc_attr($darker_color) . '" ', $svg_content);
+        $encoded_svg = 'data:image/svg+xml,' . rawurlencode($svg_content);
+        echo '<img class="project-icon" src="' . esc_attr($encoded_svg) . '" alt="Project Icon">';
+    } else {
+        // Fallback icon or message
+        echo '<p>Unable to load icon.</p>';
+    }
+    ?>
 </div>
             <span class="project-title">
                 <?php echo esc_html($project->post_title); ?>
@@ -218,19 +254,17 @@ function openChat(projectID, projectName, projectColor) {
 .project-icon-box {
     width: 65px;
     height: 65px;
-    background-color: #ffffff;
-    border-radius: 10px; /* Adjust the corner radius as needed */
+    background-color: #ffffff; /* White background for the box */
+    border-radius: 10px;
     display: flex;
     align-items: center;
     justify-content: center;
-    overflow: hidden; /* Ensures the image stays within the box */
+    overflow: hidden;
 }
 
 .project-icon {
-    max-width: 100%; /* Ensures the image does not exceed the container width */
-    max-height: 100%; /* Ensures the image does not exceed the container height */
-    display: block; /* Ensures the image behaves as a block element */
-    margin: auto; /* Centers the image horizontally and vertically */
+    width: 50px; /* Adjust size as needed */
+    height: 50px; /* Adjust size as needed */
 }
 
 .chat-message {
