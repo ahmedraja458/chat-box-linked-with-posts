@@ -1,8 +1,16 @@
+function hex_to_css_filter($hex_color) {
+    $hex_color = str_replace('#', '', $hex_color);
+    $r = hexdec(substr($hex_color, 0, 2));
+    $g = hexdec(substr($hex_color, 2, 2));
+    $b = hexdec(substr($hex_color, 4, 2));
+    $filter = "invert(1) sepia(1) saturate(10000%) hue-rotate(${r}deg) brightness(${g}%) contrast(${b}%)";
+    return $filter;
+}
+
 function get_project_color_inline_css($project_id) {
     $project_color = get_field('project_color', $project_id);
     return $project_color ? 'background-color:' . esc_attr($project_color) . ';' : '';
 }
-
 
 
 
@@ -61,9 +69,11 @@ function project_discussion_shortcode() {
         ?>
         <div class="project-card" style="<?php echo get_project_color_inline_css($project->ID); ?>" data-project-id="<?php echo esc_attr($project->ID); ?>" data-project-title="<?php echo esc_attr($project->post_title); ?>">
             <!-- Image Container -->
-            <div class="project-icon-box">
-                <img decoding="async" src="https://customer.codeslogistics.com/wp-content/uploads/2025/03/Path-34.svg" alt="Project Icon" class="project-icon">
-            </div>
+           <div class="project-icon-box" style="background-color: #ffffff;">
+    <svg class="project-icon" viewBox="0 0 24 24" fill="<?php echo esc_attr(get_field('project_color', $project->ID)); ?>" xmlns="http://www.w3.org/2000/svg">
+        <path d="M20 2H4C2.9 2 2 2.9 2 4V22L6 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2Z"/>
+    </svg>
+</div>
             <span class="project-title">
                 <?php echo esc_html($project->post_title); ?>
             </span>
